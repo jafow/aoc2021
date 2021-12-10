@@ -1,8 +1,7 @@
 use std::cmp::Ordering;
 use common::{input, input_to_slice_lines};
 
-// const WORDSIZE: usize = 12;
-const WORDSIZE: usize = 5;
+const WORDSIZE: usize = 12;
 
 #[derive(Debug, PartialEq)]
 struct DiagCode {
@@ -10,7 +9,11 @@ struct DiagCode {
     y: u32,
 }
 
-// fn frequencies(xs: &Vec<&str>) -> Vec<(u32, u32, Option(&str))> {
+enum BitCriteria {
+    O2,
+    CO2
+}
+
 fn frequencies(xs: &Vec<&str>) -> Vec<DiagCode> {
     let mut freqs: Vec<DiagCode> = Vec::with_capacity(WORDSIZE);
     // prepare the freq list
@@ -82,25 +85,6 @@ fn mul_strs(p: &str, q: &str) -> Option<u32> {
     Some(pint * qint)
 }
 
-fn f_remain(idx: usize, val: u32, xs: &Vec<String>) -> Vec<String> {
-    dbg!("=== fremain === input res {:?} on idx {:?} with valur: {:?}", &xs, &idx, &val);
-    if xs.len() == 1 {
-        dbg!("we got to the end at idx {:?}, res {:?}", &idx, xs);
-        return xs.to_vec();
-    }
-    let mut res: Vec<String> = Vec::new();
-    for x in xs {
-        let xidx = x[idx..idx+1].parse::<u32>().unwrap();
-        if xidx == val {
-            dbg!("this value matches at idx {:?}", xidx);
-            res.push(x.to_string());
-        }
-    }
-    dbg!("=== fremain === returning res {:?} on idx {:?}", &res, &idx);
-    res
-}
-
-
 fn p1(xs: &Vec<&str>) -> Option<u32> {
     let freqtable = frequencies(xs);
     let gamma = freqtable.iter().map(|item| {
@@ -121,46 +105,65 @@ fn p1(xs: &Vec<&str>) -> Option<u32> {
     res
 }
 
-
-
-
-fn p2(xs: &Vec<&str>) -> Option<String> {
-    let freqtable = frequencies(xs);
-    dbg!(&freqtable.len());
-
-    // starting vec
-    let mut rem: Vec<String> = Vec::new();
-    for x in xs {
-        rem.push(x.to_string())
+fn p2_inner<'a>(xs: &Vec<&'a str>, idx: usize, bc: BitCriteria) -> Vec<&'a str> {
+    if xs.len() == 1 {
+        return xs.to_vec();
     }
 
-    for (idx, diagcode) in freqtable.iter().enumerate() {
-        let max: u32;
-        match diagcode.x.cmp(&diagcode.y) {
-            Ordering::Equal => {
-               dbg!("p2::: equal====== idx: {:?}, diagcode {:?}", &idx, &diagcode);
-               max = 1u32;
+    // the indexes of each 0 (z) and 1 (o)
+    let mut z: Vec<usize> = Vec::new();
+    let mut o: Vec<usize> = Vec::new();
+    
+    for i in 0..xs.len() {
+        match &xs[i][idx..idx+1] {
+            "0" => {
+                z.push(i);
             },
-            Ordering::Less => {
-               dbg!("p2::: less ====== idx: {:?}, diagcode {:?}", &idx, &diagcode);
-               max = 1u32;
+            "1" => {
+                o.push(i);
             },
-            Ordering::Greater => {
-               dbg!("p2::: greater ====== idx: {:?}, diagcode {:?}", &idx, &diagcode);
-               max = 0u32;
+            _ => ()
+        }
+    }
+    // which are greater?
+    match z.len().cmp(&o.len()) {
+        Ordering::Equal => {
+            match bc {
+                BitCriteria::O2 => xs.iter().enumerate().filter(|(i, _)| { o.contains(i) }).map(|t| *t.1).collect::<Vec<_>>(),
+                BitCriteria::CO2 => xs.iter().enumerate().filter(|(i, _)| { z.contains(i) }).map(|t| *t.1).collect::<Vec<_>>()
             }
         }
-        rem = f_remain(idx, max, &rem);
+        Ordering::Less => {
+            match bc {
+                BitCriteria::O2 => xs.iter().enumerate().filter(|(i, _)| { o.contains(i) }).map(|t| *t.1).collect::<Vec<_>>(),
+                BitCriteria::CO2 => xs.iter().enumerate().filter(|(i, _)| { z.contains(i) }).map(|t| *t.1).collect::<Vec<_>>()
+            }
+        }
+        Ordering::Greater => {
+            match bc {
+                BitCriteria::O2 => xs.iter().enumerate().filter(|(i, _)| { z.contains(i) }).map(|t| *t.1).collect::<Vec<_>>(),
+                BitCriteria::CO2 => xs.iter().enumerate().filter(|(i, _)| { o.contains(i) }).map(|t| *t.1).collect::<Vec<_>>()
+            }
+        }
     }
-    let p = &rem[0];
-    dbg!(&rem);
-    Some(p.to_string())
+}
+
+fn p2<'a>(xs: &Vec<&'a str>) -> Option<u32> {
+    let mut o2 = p2_inner(xs, 0usize, BitCriteria::O2);
+    let mut co2 = p2_inner(xs, 0usize, BitCriteria::CO2);
+    for w in 1..WORDSIZE {
+        o2 = p2_inner(&o2, w, BitCriteria::O2);
+        co2 = p2_inner(&co2, w, BitCriteria::CO2);
+    }
+    let res = mul_strs(o2[0], co2[0]);
+    res
 }
 
 #[test]
 fn test_p2() {
+    const WORDSIZE: usize = 5;
     let xs = vec!["00100","11110", "10110","10111", "10101", "01111", "00111", "11100", "10000", "11001", "00010", "01010"];
-    assert_eq!(p2(&xs), Some(String::from("10111")));
+    assert_eq!(p2(&xs), Some(230u32));
 }
 
 
@@ -170,8 +173,8 @@ fn main() {
     let xs = input_to_slice_lines(&raw);
 
     let res = p1(&xs);
-    println!("{:?}", res);
+    println!("p1 {:?}", res);
 
     let res = p2(&xs);
-    println!("{:?}", res);
+    println!("p2: {:?}", res);
 }
