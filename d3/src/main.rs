@@ -105,7 +105,7 @@ fn p1(xs: &Vec<&str>) -> Option<u32> {
     res
 }
 
-fn p2_inner<'a>(xs: &Vec<&'a str>, idx: usize, bc: BitCriteria) -> Vec<&'a str> {
+fn p2_inner<'a>(xs: &[&'a str], idx: usize, bc: BitCriteria) -> Vec<&'a str> {
     if xs.len() == 1 {
         return xs.to_vec();
     }
@@ -148,7 +148,7 @@ fn p2_inner<'a>(xs: &Vec<&'a str>, idx: usize, bc: BitCriteria) -> Vec<&'a str> 
     }
 }
 
-fn p2<'a>(xs: &Vec<&'a str>) -> Option<u32> {
+fn p2<'a>(xs: &[&'a str]) -> Option<u32> {
     let mut o2 = p2_inner(xs, 0usize, BitCriteria::O2);
     let mut co2 = p2_inner(xs, 0usize, BitCriteria::CO2);
     for w in 1..WORDSIZE {
